@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vacation Builder</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>✈️ Vacation Builder</h1>
+            <p>AI-Powered Itinerary Planning</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Input Panel -->
+            <div class="input-panel">
+                <div class="panel-header">
+                    <h2>Plan Your Trip</h2>
+                </div>
+
+                <div class="form-section">
+                    <label>Your Preferences</label>
+                    <textarea
+                        id="preferences"
+                        placeholder="Describe your ideal vacation... (e.g., I love outdoor activities, local cuisine, historical sites, and prefer a relaxed pace)"
+                        rows="4"
+                    ></textarea>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-header">
+                        <label>Destinations</label>
+                        <button id="add-destination" class="btn-secondary">+ Add Destination</button>
+                    </div>
+                    <div id="destinations-list" class="destinations-list">
+                        <!-- Destinations will be added here -->
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button id="generate-btn" class="btn-primary">
+                        <span class="btn-text">Generate Itinerary</span>
+                        <span class="btn-loader" style="display: none;">⏳ Generating...</span>
+                    </button>
+                </div>
+
+                <div id="status-message" class="status-message"></div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="preview-panel">
+                <div class="panel-header">
+                    <h2>Itinerary Preview</h2>
+                    <div class="preview-actions">
+                        <button id="export-pdf-btn" class="btn-secondary" style="display: none;">
+                            📄 Export PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div id="preview-content" class="preview-content">
+                    <div class="empty-state">
+                        <div class="empty-icon">🗺️</div>
+                        <h3>Your itinerary will appear here</h3>
+                        <p>Fill in your preferences and destinations, then click "Generate Itinerary"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div id="backend-status" class="backend-status">
+                <span class="status-dot status-checking"></span>
+                <span>Checking backend...</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
