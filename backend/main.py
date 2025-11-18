@@ -1,3 +1,36 @@
+import os
+import certifi
+import ssl
+import urllib3
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.ssl_ import create_urllib3_context
+
+# Disable SSL warnings and verification for development
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+os.environ['PYTHONHTTPSVERIFY'] = '0'
+os.environ['CURL_CA_BUNDLE'] = ''
+os.environ['REQUESTS_CA_BUNDLE'] = ''
+ssl._create_default_https_context = ssl._create_unverified_context
+
+# Monkey-patch requests to disable SSL verification globally
+class SSLAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs['ssl_version'] = ssl.PROTOCOL_TLS
+        kwargs['cert_reqs'] = ssl.CERT_NONE
+        return super().init_poolmanager(*args, **kwargs)
+
+# Patch all requests sessions
+original_session = requests.Session
+class PatchedSession(original_session):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.verify = False
+        self.mount('https://', SSLAdapter())
+        self.mount('http://', HTTPAdapter())
+
+requests.Session = PatchedSession
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -38,6 +71,7 @@ class VacationResponse(BaseModel):
 
 class PDFRequest(BaseModel):
     markdown: str
+    output_path: Optional[str] = None
 
 @app.get("/health")
 async def health_check():
@@ -76,7 +110,7 @@ async def generate_pdf(request: PDFRequest):
     """Generate PDF from markdown itinerary"""
     try:
         print(f"Generating PDF...")
-        pdf_path = await pdf_generator.generate(request.markdown)
+        pdf_path = await pdf_generator.generate(request.markdown, request.output_path)
         print(f"PDF saved to: {pdf_path}")
         return {"pdf_path": pdf_path, "success": True}
     except Exception as e:

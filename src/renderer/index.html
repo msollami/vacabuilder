@@ -6,11 +6,23 @@
     <title>Vacation Builder</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="module">
+        // Load Tauri API for vanilla JS without bundler
+        if (window.__TAURI_INTERNALS__) {
+            import('https://esm.sh/@tauri-apps/api@2').then(api => {
+                window.__TAURI_API__ = api;
+                console.log('Tauri API loaded via ESM');
+            }).catch(err => {
+                console.error('Failed to load Tauri API:', err);
+            });
+        }
+    </script>
 </head>
 <body>
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
+            <button id="history-btn" class="btn-history">📚 History</button>
             <h1>✈️ Vacation Builder</h1>
             <p>AI-Powered Itinerary Planning</p>
         </header>
@@ -48,19 +60,15 @@
                         <span class="btn-loader" style="display: none;">⏳ Generating...</span>
                     </button>
                 </div>
-
-                <div id="status-message" class="status-message"></div>
             </div>
 
             <!-- Preview Panel -->
             <div class="preview-panel">
                 <div class="panel-header">
                     <h2>Itinerary Preview</h2>
-                    <div class="preview-actions">
-                        <button id="export-pdf-btn" class="btn-secondary" style="display: none;">
-                            📄 Export PDF
-                        </button>
-                    </div>
+                    <button id="export-pdf-btn" class="btn-export" disabled onclick="exportPDF()">
+                        📄 Export PDF
+                    </button>
                 </div>
 
                 <div id="preview-content" class="preview-content">
@@ -79,7 +87,30 @@
                 <span class="status-dot status-checking"></span>
                 <span>Checking backend...</span>
             </div>
+            <div id="status-message" class="status-message"></div>
         </footer>
+
+        <!-- History Panel -->
+        <div id="history-panel" class="history-panel">
+            <div class="history-header">
+                <h2>📚 Trip History</h2>
+                <button id="close-history" class="btn-close-history">✕</button>
+            </div>
+            <div id="history-list" class="history-list">
+                <!-- History items will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner">
+                <div class="spinner-ring"></div>
+            </div>
+            <div class="loading-text">Generating Your Itinerary</div>
+            <div class="loading-subtext">This may take a minute...</div>
+        </div>
     </div>
 
     <script src="app.js"></script>

@@ -1,12 +1,49 @@
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use tauri::Manager;
+use reqwest;
 
 struct PythonProcess(Mutex<Option<Child>>);
 
 #[tauri::command]
 fn get_backend_url() -> String {
     "http://127.0.0.1:8000".to_string()
+}
+
+#[tauri::command]
+async fn fetch_backend(url: String, method: String, body: Option<String>) -> Result<String, String> {
+    let client = reqwest::Client::new();
+
+    let request = match method.as_str() {
+        "GET" => client.get(&url),
+        "POST" => {
+            let mut req = client.post(&url);
+            if let Some(body_content) = body {
+                req = req.header("Content-Type", "application/json").body(body_content);
+            }
+            req
+        }
+        _ => return Err(format!("Unsupported method: {}", method)),
+    };
+
+    let response = request
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = response.status();
+    let text = response.text().await.map_err(|e| e.to_string())?;
+
+    if status.is_success() {
+        Ok(text)
+    } else {
+        Err(format!("HTTP {}: {}", status.as_u16(), text))
+    }
+}
+
+#[tauri::command]
+async fn open_file(path: String) -> Result<(), String> {
+    open_pdf(path).await
 }
 
 #[tauri::command]
@@ -107,7 +144,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_backend_url,
-            open_pdf
+            open_pdf,
+            fetch_backend,
+            open_file
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {

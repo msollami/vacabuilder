@@ -1,11 +1,26 @@
 import wikipedia
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from typing import Dict, Optional, List
+import ssl
+import urllib3
+
+# Disable SSL warnings for development
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class WikipediaFetcher:
     """Fetch travel information from Wikipedia/WikiVoyage"""
 
     def __init__(self):
         wikipedia.set_lang("en")
+
+        # Configure session to bypass SSL verification
+        session = requests.Session()
+        session.verify = False
+
+        # Monkey-patch the wikipedia library's session
+        wikipedia.wikipedia.session = session
 
     def get_destination_summary(self, destination: str) -> Optional[str]:
         """Get a summary of a destination from Wikipedia"""

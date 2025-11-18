@@ -2,24 +2,33 @@ import markdown
 from weasyprint import HTML, CSS
 from datetime import datetime
 import os
+from pathlib import Path
 
 class PDFGenerator:
     """Generate beautiful PDFs from markdown itineraries"""
 
     def __init__(self):
-        self.output_dir = "output"
+        # Use ~/Downloads as default output directory
+        self.output_dir = os.path.join(str(Path.home()), "Downloads")
         os.makedirs(self.output_dir, exist_ok=True)
 
-    async def generate(self, markdown_text: str) -> str:
+    async def generate(self, markdown_text: str, output_path: str = None) -> str:
         """Generate PDF from markdown text"""
 
         # Convert markdown to HTML
         html_content = self._markdown_to_html(markdown_text)
 
-        # Generate PDF
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        pdf_filename = f"vacation_itinerary_{timestamp}.pdf"
-        pdf_path = os.path.join(self.output_dir, pdf_filename)
+        # Determine output path
+        if output_path:
+            pdf_path = output_path
+        else:
+            # Generate default path
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            pdf_filename = f"vacation_itinerary_{timestamp}.pdf"
+            pdf_path = os.path.join(self.output_dir, pdf_filename)
+
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(pdf_path) if os.path.dirname(pdf_path) else self.output_dir, exist_ok=True)
 
         # Create PDF with custom styling
         HTML(string=html_content).write_pdf(

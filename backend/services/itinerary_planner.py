@@ -49,7 +49,8 @@ class ItineraryPlanner:
 
         markdown = self._generate_markdown_itinerary(
             enriched_destinations,
-            preferences
+            preferences,
+            enriched_destinations  # Pass for image gallery
         )
 
         print(f"\n{'='*60}")
@@ -84,7 +85,7 @@ class ItineraryPlanner:
             'images': wiki_info.get('images', [])[:3]
         }
 
-    def _generate_markdown_itinerary(self, destinations: List[Dict], preferences: str) -> str:
+    def _generate_markdown_itinerary(self, destinations: List[Dict], preferences: str, enriched_destinations: List[Dict]) -> str:
         """Use LLM to generate markdown itinerary"""
 
         # Prepare context for LLM
@@ -98,7 +99,9 @@ class ItineraryPlanner:
 - Travel tips and local insights
 - Must-see attractions
 
-Be specific, practical, and enthusiastic. Make the itinerary feel personalized."""
+Be specific, practical, and enthusiastic. Make the itinerary feel personalized.
+
+IMPORTANT: Start with a creative, destination-specific title (e.g., "5-Day Adventure in Tokyo"). Do NOT use generic titles like "Your Dream Vacation Itinerary" or "Vacation Itinerary"."""
 
         user_prompt = f"""Create a vacation itinerary with the following information:
 
@@ -117,20 +120,46 @@ Generate a complete, day-by-day itinerary in markdown format. Include specific t
         full_prompt = self.llm.create_prompt(system_prompt, user_prompt)
         itinerary_text = self.llm.generate(full_prompt, max_tokens=3000, temperature=0.7)
 
-        # Create final markdown with header
-        markdown = f"""# Your Dream Vacation Itinerary
+        # Debug: Print first 200 chars of LLM output
+        print(f"\n{'='*60}")
+        print(f"LLM OUTPUT (first 200 chars):")
+        print(f"{itinerary_text[:200]}")
+        print(f"{'='*60}\n")
 
-Generated on {datetime.now().strftime('%B %d, %Y')}
+        # Create final markdown
+        # Remove generic headers if LLM generated them (despite instructions)
+        lines = itinerary_text.strip().split('\n')
 
----
+        print(f"First line from LLM: {lines[0] if lines else 'NO LINES'}")
 
-{itinerary_text}
+        # Remove any leading generic headers
+        while lines and any(header.lower() in lines[0].lower() for header in ['your dream vacation', 'vacation itinerary']):
+            print(f"🗑️  REMOVING GENERIC HEADER: {lines[0]}")
+            lines.pop(0)
+            # Also remove any empty lines after the header
+            while lines and not lines[0].strip():
+                lines.pop(0)
 
----
+        # Rejoin the text
+        itinerary_text = '\n'.join(lines)
 
-## Additional Resources
+        # Split into first line (title) and rest
+        lines = itinerary_text.split('\n', 1)
 
-"""
+        # Add date after the first line (which should be the actual trip title)
+        generated_date = f"\nGenerated on {datetime.now().strftime('%B %d, %Y')}\n\n---\n\n"
+
+        if len(lines) > 1:
+            markdown = f"{lines[0]}\n{generated_date}{lines[1]}"
+        else:
+            markdown = f"{itinerary_text}\n{generated_date}"
+
+        # Add image gallery if available
+        image_gallery = self._create_image_gallery(enriched_destinations)
+        if image_gallery:
+            markdown += f"\n\n{image_gallery}\n\n"
+
+        markdown += f"\n\n---\n\n## Additional Resources\n\n"
 
         # Add destination links
         for dest in destinations:
@@ -177,6 +206,21 @@ Generated on {datetime.now().strftime('%B %d, %Y')}
             'destinations_text': destinations_text,
             'attractions_text': attractions_text
         }
+
+    def _create_image_gallery(self, destinations: List[Dict]) -> str:
+        """Create an image gallery from destination images"""
+        gallery_md = "## Photo Gallery\n\n"
+        has_images = False
+
+        for dest in destinations:
+            images = dest.get('images', [])
+            if images:
+                has_images = True
+                gallery_md += f"### {dest['name']}\n\n"
+                for img_url in images[:3]:  # Limit to 3 images per destination
+                    gallery_md += f"![{dest['name']}]({img_url})\n\n"
+
+        return gallery_md if has_images else ""
 
     def _structure_itinerary(self, destinations: List[Dict], markdown: str) -> Dict:
         """Structure itinerary data for API response"""
