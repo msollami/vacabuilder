@@ -467,24 +467,26 @@ body {
 /* Date Mode Toggle - Unified Button Bar */
 .date-mode-toggle {
     display: flex;
+    flex-wrap: wrap;
     background: #f0f0f0;
     border-radius: 10px;
     padding: 4px;
     margin-bottom: 15px;
-    overflow: hidden;
+    gap: 4px;
 }
 
 .date-mode-toggle label {
-    flex: 1;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     cursor: pointer;
-    padding: 10px 16px;
+    padding: 10px 12px;
     background: transparent;
     border: none;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin-bottom: 0;

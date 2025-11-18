@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from llm.model import LocalLLM
 from fetchers.google_places import GooglePlacesFetcher
 from fetchers.wikipedia import WikipediaFetcher
+from fetchers.wikivoyage import WikivoyageFetcher
+from fetchers.wikimedia_commons import WikimediaCommonsFetcher
 from fetchers.web_scraper import WebScraper
 
 class ItineraryPlanner:
@@ -13,6 +15,8 @@ class ItineraryPlanner:
         self.llm = LocalLLM()
         self.google_places = GooglePlacesFetcher()
         self.wikipedia = WikipediaFetcher()
+        self.wikivoyage = WikivoyageFetcher()
+        self.wikimedia = WikimediaCommonsFetcher()
         self.scraper = WebScraper()
 
     def is_llm_ready(self) -> bool:
@@ -68,7 +72,10 @@ class ItineraryPlanner:
     async def _gather_destination_info(self, destination: str) -> Dict:
         """Gather information from multiple sources"""
 
-        # Wikipedia info
+        # Wikivoyage info (preferred for travel)
+        wikivoyage_info = self.wikivoyage.get_destination_info(destination)
+
+        # Wikipedia info (backup)
         wiki_info = self.wikipedia.get_destination_info(destination)
 
         # Google Places attractions
@@ -77,12 +84,43 @@ class ItineraryPlanner:
         # Travel tips
         scraper_info = self.scraper.search_destination_info(destination)
 
+        # Combine images from multiple sources
+        all_images = []
+
+        # 1. Wikivoyage images (best for travel)
+        if wikivoyage_info.get('images'):
+            all_images.extend(wikivoyage_info['images'][:5])
+            print(f"   ✓ Found {len(wikivoyage_info['images'])} images from Wikivoyage")
+
+        # 2. Wikipedia images
+        if wiki_info.get('images'):
+            all_images.extend(wiki_info['images'][:3])
+            print(f"   ✓ Found {len(wiki_info['images'])} images from Wikipedia")
+
+        # 3. If we still don't have enough images, search Wikimedia Commons
+        if len(all_images) < 5:
+            print(f"   🔍 Searching Wikimedia Commons for more images...")
+            commons_images = self.wikimedia.get_destination_images(destination, limit=8)
+            all_images.extend(commons_images)
+            print(f"   ✓ Found {len(commons_images)} images from Wikimedia Commons")
+
+        # Use Wikivoyage summary if available, fallback to Wikipedia
+        summary = wikivoyage_info.get('summary') or wiki_info.get('summary', '')
+        url = wikivoyage_info.get('url') or wiki_info.get('url', '')
+
+        print(f"   📸 Total images collected: {len(all_images)}")
+
         return {
-            'wiki_summary': wiki_info.get('summary', ''),
-            'wiki_url': wiki_info.get('url', ''),
+            'wiki_summary': summary,
+            'wiki_url': url,
             'attractions': attractions,
             'tips': scraper_info.get('tips', []),
-            'images': wiki_info.get('images', [])[:3]
+            'images': all_images[:10],  # Keep up to 10 images
+            'wikivoyage_sections': {
+                'see': wikivoyage_info.get('see', ''),
+                'do': wikivoyage_info.get('do', ''),
+                'eat': wikivoyage_info.get('eat', ''),
+            }
         }
 
     def _generate_markdown_itinerary(self, destinations: List[Dict], preferences: str, enriched_destinations: List[Dict]) -> str:
@@ -214,11 +252,18 @@ Generate a complete, day-by-day itinerary in markdown format. Include specific t
 
         for dest in destinations:
             images = dest.get('images', [])
+            print(f"📸 Destination: {dest['name']} - Found {len(images)} images")
             if images:
                 has_images = True
                 gallery_md += f"### {dest['name']}\n\n"
-                for img_url in images[:3]:  # Limit to 3 images per destination
+                for img_url in images[:5]:  # Show up to 5 images per destination
+                    print(f"   Adding image: {img_url[:80]}...")
                     gallery_md += f"![{dest['name']}]({img_url})\n\n"
+
+        if has_images:
+            print(f"✅ Created photo gallery with images!")
+        else:
+            print(f"❌ No images found for gallery")
 
         return gallery_md if has_images else ""
 
