@@ -39,11 +39,23 @@ async fn open_pdf(path: String) -> Result<(), String> {
 }
 
 fn start_python_backend(app: &tauri::App) -> Result<Child, String> {
-    let resource_path = app.path()
-        .resource_dir()
-        .map_err(|e| e.to_string())?;
+    // In development mode, use the backend directory relative to the project root
+    // In production, use the bundled backend from the resource directory
+    let backend_path = if cfg!(debug_assertions) {
+        // Development mode - backend is in project root
+        std::env::current_dir()
+            .map_err(|e| e.to_string())?
+            .parent()
+            .ok_or("Failed to get parent directory")?
+            .join("backend")
+    } else {
+        // Production mode - backend is bundled in resources
+        app.path()
+            .resource_dir()
+            .map_err(|e| e.to_string())?
+            .join("backend")
+    };
 
-    let backend_path = resource_path.join("backend");
     let venv_python = if cfg!(target_os = "windows") {
         backend_path.join("venv").join("Scripts").join("python.exe")
     } else {
@@ -53,6 +65,7 @@ fn start_python_backend(app: &tauri::App) -> Result<Child, String> {
     let main_py = backend_path.join("main.py");
 
     println!("Starting Python backend at: {:?}", main_py);
+    println!("Using Python at: {:?}", venv_python);
 
     let child = Command::new(venv_python)
         .arg(main_py)
