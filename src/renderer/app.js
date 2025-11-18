@@ -1,3 +1,6 @@
+// Import Tauri API
+const { invoke } = window.__TAURI__.core;
+
 // State
 let destinations = [];
 let currentItinerary = null;
@@ -5,7 +8,7 @@ let backendURL = 'http://127.0.0.1:8000';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-    backendURL = await window.electronAPI.getBackendURL();
+    backendURL = await invoke('get_backend_url');
     setupEventListeners();
     addDestination(); // Add first destination by default
     checkBackendHealth();
@@ -218,7 +221,7 @@ async function exportPDF() {
 
         if (data.success && data.pdf_path) {
             showStatus('PDF generated successfully! Opening...', 'success');
-            await window.electronAPI.openPDF(data.pdf_path);
+            await invoke('open_pdf', { path: data.pdf_path });
         }
 
     } catch (error) {
@@ -265,8 +268,3 @@ function showStatus(message, type) {
         }, 5000);
     }
 }
-
-// Listen to backend logs
-window.electronAPI.onBackendLog((event, log) => {
-    console.log('Backend:', log);
-});
