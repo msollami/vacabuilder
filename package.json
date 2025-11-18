@@ -4,7 +4,7 @@
   "description": "AI-powered vacation itinerary builder with local LLM",
   "scripts": {
     "tauri": "tauri",
-    "dev": "concurrently \"tauri dev\" \"npm run backend\"",
+    "dev": "tauri dev",
     "backend": "cd backend && ./venv/bin/python main.py",
     "build": "tauri build"
   },
